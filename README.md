@@ -64,6 +64,7 @@ open build/AgentDeck.app                       # menu bar icon; allow notificati
 - `install.py uninstall` removes the hooks; if nothing else changed since install, your settings files are restored byte for byte.
 - After updating agent-deck, run `install.py uninstall` and then `install.py install` so the hooks match the new version.
 - Optional: `scripts/make_signing_identity.sh` creates a local code-signing identity so macOS permissions survive rebuilds (you trust its certificate once); without it the app is signed ad hoc.
+- Start at login: `scripts/autostart.sh on` installs a per-user LaunchAgent that starts the app at login and restarts it if it crashes (quitting from the menu stays quit). `autostart.sh off` removes it; it is also listed under System Settings → General → Login Items.
 
 ### Safety
 
@@ -87,7 +88,7 @@ Sources/AgentDeck/     the menu bar app: DeckStore (state and actions), UI/, Win
                        Discovery/, Notify/, Codex/, Usage/, Diagnostics/
 Tests/DeckCoreTests/   Swift tests for DeckCore
 hook/                  deck_hook.py, the command Claude Code and Codex run, with its tests
-scripts/               install.py (hooks), build_app.sh, make_signing_identity.sh
+scripts/               install.py (hooks), build_app.sh, autostart.sh, make_signing_identity.sh
 docs/                  requirements and research notes (in Chinese), spike probes, images
 ```
 
@@ -156,6 +157,7 @@ open build/AgentDeck.app                       # 出现菜单栏图标；系统�
 - `install.py uninstall`：移除 hook；如果安装后配置没有别的改动，会逐字节还原原文件。
 - 更新 agent-deck 后，先跑 `install.py uninstall` 再跑 `install.py install`，让 hook 和新版本一致。
 - 可选：`scripts/make_signing_identity.sh` 生成本地签名证书，重新构建后系统权限不会失效（需要你手动信任一次证书）；不生成的话用临时签名。
+- 开机自启：`scripts/autostart.sh on` 会装一个用户级 LaunchAgent，登录时启动 app，崩溃了自动拉起；在菜单里点“退出”就是真的退出。`autostart.sh off` 可以关掉，在“系统设置 → 通用 → 登录项”里也能看到和关闭它。
 
 ### 安全
 

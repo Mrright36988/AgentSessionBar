@@ -18,6 +18,14 @@ struct AgentDeckApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // One instance only: a second one would take over the hook socket from the first.
+        let me = ProcessInfo.processInfo.processIdentifier
+        if let other = NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "")
+            .first(where: { $0.processIdentifier != me }) {
+            Log.write("already running as pid \(other.processIdentifier); exiting")
+            NSApp.terminate(nil)
+            return
+        }
         Log.write("launched bundle=\(Bundle.main.bundleIdentifier ?? "-")")
         Notifier.shared.setUp()
         DeckStore.shared.start()
