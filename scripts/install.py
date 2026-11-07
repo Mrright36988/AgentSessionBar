@@ -142,10 +142,12 @@ def install(paths=DEFAULT):
 
 
 def uninstall(paths=DEFAULT):
+    retrust = False
     for path, _ in targets(paths):
         if not os.path.exists(path) or not installed(load(path)):
             print("nothing to remove in %s" % path)
             continue
+        retrust = retrust or (path == paths.codex_hooks and bool(installed(load(path), is_legacy)))
         data = strip(load(path))
         backups = sorted(glob.glob(path + ".bak.agentsessionbar-*")) or sorted(glob.glob(path + ".bak.agent-deck-*"))
         if backups and load(backups[-1]) == data:
@@ -157,6 +159,11 @@ def uninstall(paths=DEFAULT):
     for shim in (paths.shim_dst, paths.legacy_shim):
         if os.path.exists(shim):
             os.remove(shim)
+    if retrust:
+        # The new hooks land in the slots the old ones held, so the old trust records in config.toml make
+        # `status` report them as trusted, while Codex checks a hash of the definition and skips them.
+        print("\nCodex: after `install.py install`, trust the new entries again in Cursor (Codex settings > Hooks),")
+        print("even if `install.py status` says they are trusted: it sees the old agent-deck trust records.")
 
 
 def snake(name):

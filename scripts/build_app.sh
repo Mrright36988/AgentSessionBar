@@ -3,7 +3,7 @@
 # make_signing_identity.sh when it exists, so macOS permission grants survive rebuilds; ad hoc otherwise.
 # The hook installer and the hook go into Contents/Resources, so the app alone is enough to set up hooks.
 #   build_app.sh [--out PATH] [--adhoc] [--universal]
-#     --out PATH    where to put the app (default build/AgentSessionBar.app)
+#     --out PATH    the .app bundle to create, relative to the repo root (default build/AgentSessionBar.app)
 #     --adhoc       always sign ad hoc (release builds must not carry the local identity)
 #     --universal   build for arm64 and x86_64
 set -euo pipefail
@@ -20,6 +20,10 @@ while [ $# -gt 0 ]; do
         *) echo "usage: build_app.sh [--out PATH] [--adhoc] [--universal]" >&2; exit 2 ;;
     esac
 done
+case "$app" in   # the path is deleted and rebuilt, so it has to be an app bundle, never a folder like ~/Applications
+    *.app) ;;
+    *) echo "--out must name the .app to create, e.g. dist/AgentSessionBar.app" >&2; exit 2 ;;
+esac
 
 if [ "$universal" = 1 ]; then
     # SwiftPM's --arch needs Xcode's xcbuild; building each triple and joining them works with the CLT alone.

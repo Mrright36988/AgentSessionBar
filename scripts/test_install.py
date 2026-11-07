@@ -96,6 +96,13 @@ class InstallTest(unittest.TestCase):
         self.assertTrue(filecmp.cmp(self.paths.claude_settings, self.paths.claude_settings + ".orig", shallow=False))
         self.assertFalse(os.path.exists(self.paths.legacy_shim))
 
+    def test_uninstall_of_old_codex_hooks_asks_to_trust_again(self):
+        codex = install.load(self.paths.codex_hooks)
+        codex["hooks"]["Stop"] = [{"hooks": [dict(LEGACY, command=LEGACY["command"].replace("claude", "codex"))]}]
+        install.save(self.paths.codex_hooks, codex)
+        self.assertIn("trust the new entries again", self.quiet(install.uninstall))
+        self.assertEqual(install.installed(install.load(self.paths.codex_hooks)), [])
+
     def test_install_waits_until_old_hooks_are_removed(self):
         self.install_legacy()
         self.assertIn("old agent-deck hooks", self.quiet(install.status))

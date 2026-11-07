@@ -93,7 +93,7 @@ open build/AgentSessionBar.app                 # menu bar icon; allow notificati
 
 - Optional: `scripts/make_signing_identity.sh` creates a local code-signing identity so macOS permissions survive rebuilds (you trust its certificate once); without it the app is signed ad hoc.
 - Start at login: `scripts/autostart.sh on` installs a per-user LaunchAgent that starts the app at login and restarts it if it crashes (quitting from the menu stays quit). `autostart.sh off` removes it; it is also listed under System Settings → General → Login Items.
-- Coming from agent-deck: `install.py uninstall` also removes the old agent-deck hooks, and `autostart.sh on` (or `off`) removes the old login agent and quits the old app. Then run `install.py install`.
+- Coming from agent-deck: `install.py uninstall` also removes the old agent-deck hooks, and `autostart.sh on` (or `off`) removes the old login agent and quits the old app. Then run `install.py install` and trust the Codex hooks again in Cursor, even if `status` says they are trusted (it sees the old trust records). If you had made a local signing identity, run `make_signing_identity.sh` again and trust the new certificate.
 
 ### Development
 
@@ -201,7 +201,7 @@ open build/AgentSessionBar.app                 # 出现菜单栏图标；系统�
 
 - 可选：`scripts/make_signing_identity.sh` 生成本地签名证书，重新构建后系统权限不会失效（需要你手动信任一次证书）；不生成的话用临时签名。
 - 开机自启：`scripts/autostart.sh on` 会装一个用户级 LaunchAgent，登录时启动 app，崩溃了自动拉起；在菜单里点“退出”就是真的退出。`autostart.sh off` 可以关掉，在“系统设置 → 通用 → 登录项”里也能看到和关闭它。
-- 从 agent-deck 升级：`install.py uninstall` 会一并移除旧的 agent-deck hook，`autostart.sh on`（或 `off`）会移除旧的登录项并退出旧 app。之后再跑 `install.py install`。
+- 从 agent-deck 升级：`install.py uninstall` 会一并移除旧的 agent-deck hook，`autostart.sh on`（或 `off`）会移除旧的登录项并退出旧 app。之后再跑 `install.py install`，并在 Cursor 里重新信任 Codex hook；即使 `status` 显示已信任也要做，因为它看到的是旧的信任记录。如果之前生成过本地签名证书，重新跑一次 `make_signing_identity.sh` 并信任新证书。
 
 ### 开发
 
