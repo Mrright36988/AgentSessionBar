@@ -37,9 +37,9 @@ private func island(_ name: String, in islands: [Island]) -> Island? {
 
 @Test func sessionsGoToTheDeepestWindowThatHoldsThem() throws {
     let map = WindowMap.build(windows: windows, inbox: sampleInbox())
-    let copilot = try #require(island("notes-app +2", in: map.islands))
-    #expect(copilot.members.map(\.sessionId) == ["wait"])
-    #expect(copilot.count(.waiting) == 1)
+    let notes = try #require(island("notes-app +2", in: map.islands))
+    #expect(notes.members.map(\.sessionId) == ["wait"])
+    #expect(notes.count(.waiting) == 1)
     #expect(island("workspace", in: map.islands)?.members.map(\.sessionId) == ["done", "idle"])
     #expect(island("probe-ws", in: map.islands)?.members.map(\.sessionId) == ["probe"])
     let other = try #require(island("其他", in: map.islands))

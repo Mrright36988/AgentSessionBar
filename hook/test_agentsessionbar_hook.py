@@ -1,4 +1,4 @@
-"""Tests for deck_hook.py. Run: /usr/bin/python3 -m unittest discover -s hook"""
+"""Tests for agentsessionbar_hook.py. Run: /usr/bin/python3 -m unittest discover -s hook"""
 import json
 import os
 import socket
@@ -8,11 +8,11 @@ import threading
 import time
 import unittest
 
-HOOK = os.path.join(os.path.dirname(os.path.abspath(__file__)), "deck_hook.py")
+HOOK = os.path.join(os.path.dirname(os.path.abspath(__file__)), "agentsessionbar_hook.py")
 
 
 def run_hook(socket_path, tool, event, stdin):
-    env = dict(os.environ, AGENT_DECK_SOCKET=socket_path)
+    env = dict(os.environ, AGENT_SESSION_BAR_SOCKET=socket_path)
     started = time.monotonic()
     proc = subprocess.run(["/usr/bin/python3", HOOK, tool, event], input=stdin.encode(),
                           capture_output=True, env=env, timeout=10)
@@ -45,10 +45,10 @@ class FakeDeck:
         self.server.close()
 
 
-class DeckHookTest(unittest.TestCase):
+class AgentSessionBarHookTest(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.mkdtemp()
-        self.sock = os.path.join(self.dir, "deck.sock")
+        self.sock = os.path.join(self.dir, "hook.sock")
 
     def test_app_not_running_exits_fast_and_silent(self):
         proc, elapsed = run_hook(self.sock, "claude", "PermissionRequest", '{"session_id": "s1"}')

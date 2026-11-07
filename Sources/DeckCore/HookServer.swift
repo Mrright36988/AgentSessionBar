@@ -42,7 +42,7 @@ public final class PendingReply: @unchecked Sendable {
     }
 }
 
-/// Listens on a unix socket for `deck-hook`. Each connection carries one newline-terminated envelope;
+/// Listens on a unix socket for `agentsessionbar-hook`. Each connection carries one newline-terminated envelope;
 /// a waiting envelope keeps its connection open until it is answered or the hook goes away.
 public final class HookServer: @unchecked Sendable {
     public typealias Handler = @MainActor @Sendable (HookEnvelope, PendingReply?) -> Void
@@ -50,7 +50,7 @@ public final class HookServer: @unchecked Sendable {
     private let path: String
     private let handler: Handler
     private let log: @Sendable (String) -> Void
-    private let queue = DispatchQueue(label: "agent-deck.hook-server")
+    private let queue = DispatchQueue(label: "agentsessionbar.hook-server")
     private var acceptSource: DispatchSourceRead?
 
     public init(path: String, log: @escaping @Sendable (String) -> Void = { _ in }, handler: @escaping Handler) {

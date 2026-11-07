@@ -1,11 +1,11 @@
 #!/usr/bin/python3
-"""agent-deck hook: forwards a Claude Code or Codex hook event to the AgentDeck app.
+"""AgentSessionBar hook: forwards a Claude Code or Codex hook event to the AgentSessionBar app.
 
-Usage (from the hooks config): deck-hook <claude|codex> <EventName>
+Usage (from the hooks config): agentsessionbar-hook <claude|codex> <EventName>
 
 Reads the hook input on stdin and sends it over the app's unix socket. For PermissionRequest it
 waits for the app's answer and prints it. Whenever the app is unreachable, or anything goes wrong,
-it exits 0 without output, so the session carries on as if agent-deck were not installed.
+it exits 0 without output, so the session carries on as if AgentSessionBar were not installed.
 
 Cursor also runs the hooks in ~/.claude/settings.json for its own agent. Those calls carry
 `cursor_version` in their input and are ignored: they are not Claude Code sessions.
@@ -15,8 +15,8 @@ import os
 import socket
 import sys
 
-SOCKET_PATH = os.environ.get("AGENT_DECK_SOCKET") or os.path.expanduser(
-    "~/Library/Application Support/agent-deck/deck.sock")
+SOCKET_PATH = os.environ.get("AGENT_SESSION_BAR_SOCKET") or os.path.expanduser(
+    "~/Library/Application Support/AgentSessionBar/hook.sock")
 WAIT_EVENTS = {"PermissionRequest"}
 WAIT_SECONDS = 590  # below the 600 s hook timeout, so the hook always ends on its own terms
 

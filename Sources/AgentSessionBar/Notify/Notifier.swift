@@ -80,7 +80,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 
     func sendTest() {
         let content = UNMutableNotificationContent()
-        content.title = "agent-deck"
+        content.title = "AgentSessionBar"
         content.body = "测试通知"
         post(content, id: UUID().uuidString)
     }
@@ -130,7 +130,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         case Action.allow:
             if let card { store.answer(card, with: HookAnswer.allow()) }
         case Action.deny:
-            if let card { store.answer(card, with: HookAnswer.deny("在 agent-deck 里拒绝")) }
+            if let card { store.answer(card, with: HookAnswer.deny("在 AgentSessionBar 里拒绝")) }
         case _ where action.hasPrefix(Action.option):
             if let card, let index = Int(action.dropFirst(Action.option.count)) { store.answerQuestion(card, option: index) }
         case Action.reply:

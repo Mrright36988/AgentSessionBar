@@ -4,9 +4,9 @@
 # The login keychain and the keychain search list are left untouched; build_app.sh passes --keychain.
 set -euo pipefail
 
-dir="$HOME/Library/Application Support/agent-deck/signing"
-keychain="$dir/agent-deck-signing.keychain-db"
-name="AgentDeck Local Signing"
+dir="$HOME/Library/Application Support/AgentSessionBar/signing"
+keychain="$dir/agentsessionbar-signing.keychain-db"
+name="AgentSessionBar Local Signing"
 
 mkdir -p "$dir" && chmod 700 "$dir"
 [ -f "$dir/keychain-password" ] || /usr/bin/openssl rand -hex 24 > "$dir/keychain-password"

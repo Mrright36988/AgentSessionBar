@@ -3,8 +3,8 @@ import DeckCore
 import SwiftUI
 import UserNotifications
 
-/// `agentdeck://diag/<action>` hooks for checking the running app from a shell (`open -g …`).
-/// None of them can answer a card: any web page can open agentdeck:// links.
+/// `agentsessionbar://diag/<action>` hooks for checking the running app from a shell (`open -g …`).
+/// None of them can answer a card: any web page can open agentsessionbar:// links.
 @MainActor
 enum Diagnostics {
     static func handle(_ url: URL) {

@@ -2,11 +2,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "AgentDeck",
+    name: "AgentSessionBar",
     platforms: [.macOS(.v14)],
     targets: [
         .target(name: "DeckCore"),
-        .executableTarget(name: "AgentDeck", dependencies: ["DeckCore"]),
+        .executableTarget(name: "AgentSessionBar", dependencies: ["DeckCore"]),
         .testTarget(name: "DeckCoreTests", dependencies: ["DeckCore"]),
     ]
 )

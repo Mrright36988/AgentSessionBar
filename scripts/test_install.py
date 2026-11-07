@@ -4,6 +4,7 @@ import filecmp
 import io
 import json
 import os
+import shutil
 import tempfile
 import unittest
 
@@ -13,6 +14,7 @@ CLAUDE = {"hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command
           "permissions": {"allow": ["Bash(ls:*)"]}}
 CODEX = {"description": "Advisory Jev preflight", "hooks": {"UserPromptSubmit": [{"hooks": [
     {"type": "command", "command": "/usr/bin/python3 /h/.codex/hooks/jev.py", "timeout": 8}]}]}}
+LEGACY = {"type": "command", "command": "/usr/bin/python3 /h/.agent-deck/bin/deck-hook claude Stop", "timeout": 10, "async": True}
 
 
 class InstallTest(unittest.TestCase):
@@ -23,8 +25,9 @@ class InstallTest(unittest.TestCase):
             codex_hooks=os.path.join(d, "hooks.json"),
             codex_config=os.path.join(d, "config.toml"),
             shim_src=install.DEFAULT.shim_src,
-            shim_dst=os.path.join(d, ".agent-deck/bin/deck-hook"),
-            socket=os.path.join(d, "deck.sock"),
+            shim_dst=os.path.join(d, ".agentsessionbar/bin/agentsessionbar-hook"),
+            socket=os.path.join(d, "hook.sock"),
+            legacy_shim=os.path.join(d, ".agent-deck/bin/deck-hook"),
         )
         for path, data in ((self.paths.claude_settings, CLAUDE), (self.paths.codex_hooks, CODEX)):
             with open(path, "w") as f:
@@ -38,6 +41,15 @@ class InstallTest(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()) as out:
             fn(self.paths)
         return out.getvalue()
+
+    def install_legacy(self):
+        """What an install from before the rename left behind: a backup, its hook, and the old shim."""
+        shutil.copy(self.paths.claude_settings + ".orig", self.paths.claude_settings + ".bak.agent-deck-20261030000000")
+        claude = install.load(self.paths.claude_settings)
+        claude["hooks"]["Stop"] = [{"hooks": [LEGACY]}]
+        install.save(self.paths.claude_settings, claude)
+        os.makedirs(os.path.dirname(self.paths.legacy_shim))
+        open(self.paths.legacy_shim, "w").close()
 
     def test_install_appends_without_touching_existing_hooks(self):
         self.quiet(install.install)
@@ -76,6 +88,20 @@ class InstallTest(unittest.TestCase):
         after = install.load(self.paths.claude_settings)
         self.assertEqual(install.installed(after), [])
         self.assertIn("Bash(git:*)", after["permissions"]["allow"])
+
+    def test_uninstall_removes_hooks_from_before_the_rename(self):
+        self.install_legacy()
+        self.assertEqual(install.installed(install.load(self.paths.claude_settings), install.is_legacy), ["Stop"])
+        self.quiet(install.uninstall)
+        self.assertTrue(filecmp.cmp(self.paths.claude_settings, self.paths.claude_settings + ".orig", shallow=False))
+        self.assertFalse(os.path.exists(self.paths.legacy_shim))
+
+    def test_install_waits_until_old_hooks_are_removed(self):
+        self.install_legacy()
+        self.assertIn("old agent-deck hooks", self.quiet(install.status))
+        with self.assertRaises(SystemExit):
+            self.quiet(install.install)
+        self.assertFalse(os.path.exists(self.paths.shim_dst))
 
     def test_codex_trust_reads_hash_slots(self):
         self.quiet(install.install)

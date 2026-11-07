@@ -4,7 +4,7 @@ public enum Tool: String, Sendable, Codable {
     case claude, codex
 }
 
-/// One hook invocation as forwarded by `deck-hook`: `{"v":1,"tool":…,"event":…,"wait":…,"payload":{…}}`.
+/// One hook invocation as forwarded by `agentsessionbar-hook`: `{"v":1,"tool":…,"event":…,"wait":…,"payload":{…}}`.
 public struct HookEnvelope: Sendable, Codable, Equatable {
     public let tool: Tool
     public let event: String

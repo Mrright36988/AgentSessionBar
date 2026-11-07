@@ -5,7 +5,7 @@ import Foundation
 @MainActor
 final class DeckStore: ObservableObject {
     static let shared = DeckStore()
-    static let socketPath = Log.directory.appendingPathComponent("deck.sock").path
+    static let socketPath = Log.directory.appendingPathComponent("hook.sock").path
 
     /// Holding a Codex approval is only safe if the Codex plugin keeps showing its own prompt meanwhile,
     /// which is not verified yet (spike). Until then Codex approvals are listed but answered in Cursor.

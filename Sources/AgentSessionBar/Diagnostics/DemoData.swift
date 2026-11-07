@@ -1,7 +1,7 @@
 import DeckCore
 import Foundation
 
-/// Made-up sessions for `agentdeck://diag/demo`, to render the UI in states the live inbox is not in.
+/// Made-up sessions for `agentsessionbar://diag/demo`, to render the UI in states the live inbox is not in.
 /// The store it returns is never started: it talks to no hook and sends no notification.
 @MainActor
 enum DemoData {

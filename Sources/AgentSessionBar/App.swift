@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 @main
-struct AgentDeckApp: App {
+struct AgentSessionBarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
@@ -32,7 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Diagnostics.logStatus()
     }
 
-    /// `agentdeck://diag/...` lets checks run from a shell (`open -g`) without clicking the menu.
+    /// `agentsessionbar://diag/...` lets checks run from a shell (`open -g`) without clicking the menu.
     func application(_ application: NSApplication, open urls: [URL]) {
         urls.forEach(Diagnostics.handle)
     }

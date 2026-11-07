@@ -68,7 +68,7 @@ private struct CardView: View {
                 HStack {
                     if answerable {
                         Spacer()
-                        Button("拒绝") { store.answer(card.id, with: HookAnswer.deny("在 agent-deck 里拒绝")) }
+                        Button("拒绝") { store.answer(card.id, with: HookAnswer.deny("在 AgentSessionBar 里拒绝")) }
                             .buttonStyle(HUDButtonStyle())
                         Button("允许") { store.answer(card.id, with: HookAnswer.allow()) }
                             .buttonStyle(HUDButtonStyle(accent: HUD.wait))

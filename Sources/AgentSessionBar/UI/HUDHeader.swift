@@ -96,7 +96,7 @@ struct HUDHeader: View {
         let states = inbox.sessions.values.map { inbox.state(of: $0) }
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("AGENT DECK").font(.system(size: 10.5, weight: .semibold)).tracking(0.9).foregroundStyle(HUD.text3)
+                Text("AGENT SESSION BAR").font(.system(size: 10.5, weight: .semibold)).tracking(0.9).foregroundStyle(HUD.text3)
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     stat(inbox.waitingCount, "等你", HUD.wait)
                     stat(states.filter { $0 == .running }.count, "在跑", HUD.run)

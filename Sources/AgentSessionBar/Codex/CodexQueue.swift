@@ -14,7 +14,7 @@ enum CodexQueue {
             process.arguments = ["queue", "--thread", threadId, "--message", text]
             process.standardInput = FileHandle.nullDevice
             process.standardOutput = FileHandle.nullDevice
-            let errorLog = FileManager.default.temporaryDirectory.appendingPathComponent("agent-deck-codex-queue.err")
+            let errorLog = FileManager.default.temporaryDirectory.appendingPathComponent("agentsessionbar-codex-queue.err")
             FileManager.default.createFile(atPath: errorLog.path, contents: nil)
             process.standardError = try? FileHandle(forWritingTo: errorLog)
             process.terminationHandler = { finished in

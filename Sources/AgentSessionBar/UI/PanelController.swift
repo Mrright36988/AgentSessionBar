@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// A panel that takes clicks and keystrokes without activating agent-deck, so Cursor stays the active app.
+/// A panel that takes clicks and keystrokes without activating AgentSessionBar, so Cursor stays the active app.
 final class FloatingPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
@@ -28,14 +28,14 @@ final class PanelController {
         let panel = FloatingPanel(contentRect: NSRect(x: 0, y: 0, width: 420, height: 560),
                                   styleMask: [.nonactivatingPanel, .titled, .closable, .resizable, .utilityWindow],
                                   backing: .buffered, defer: false)
-        panel.title = "agent-deck"
+        panel.title = "AgentSessionBar"
         panel.level = .floating
         panel.isFloatingPanel = true
         panel.hidesOnDeactivate = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.contentView = NSHostingView(rootView: InboxView(store: DeckStore.shared, inPanel: true))
-        panel.setFrameAutosaveName("agent-deck.panel")
-        if !panel.setFrameUsingName("agent-deck.panel") { panel.center() }
+        panel.setFrameAutosaveName("agentsessionbar.panel")
+        if !panel.setFrameUsingName("agentsessionbar.panel") { panel.center() }
         return panel
     }
 }

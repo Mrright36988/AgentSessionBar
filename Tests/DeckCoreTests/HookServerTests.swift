@@ -2,10 +2,10 @@ import Foundation
 import Testing
 @testable import DeckCore
 
-/// End to end: the real hook/deck_hook.py talking to a real HookServer over a unix socket.
+/// End to end: the real hook/agentsessionbar_hook.py talking to a real HookServer over a unix socket.
 private let shim = URL(fileURLWithPath: #filePath)
     .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-    .appendingPathComponent("hook/deck_hook.py").path
+    .appendingPathComponent("hook/agentsessionbar_hook.py").path
 
 @MainActor
 private final class Seen {
@@ -22,7 +22,7 @@ private func startShim(socket: String, tool: String, event: String, input: Strin
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
     process.arguments = [shim, tool, event]
-    process.environment = ProcessInfo.processInfo.environment.merging(["AGENT_DECK_SOCKET": socket]) { $1 }
+    process.environment = ProcessInfo.processInfo.environment.merging(["AGENT_SESSION_BAR_SOCKET": socket]) { $1 }
     let stdin = Pipe(), stdout = Pipe()
     process.standardInput = stdin
     process.standardOutput = stdout
