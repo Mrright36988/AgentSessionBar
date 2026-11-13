@@ -64,31 +64,6 @@ public enum ClaudeUsage {
     }
 }
 
-public enum CodexUsage {
-    /// Parses `rate_limits` from a Codex rollout `token_count` event.
-    public static func parse(_ limits: JSONValue, now: Date = Date()) -> [UsageWindow] {
-        ["primary", "secondary"].compactMap { key -> UsageWindow? in
-            guard let window = limits[key], let percent = number(window["used_percent"]) else { return nil }
-            let minutes = Int(number(window["window_minutes"]) ?? 0)
-            let resets = date(window["resets_at"])
-            // A window that has reset since the event was written starts over at zero.
-            let current = (resets.map { $0 <= now } ?? false) ? 0 : percent
-            return UsageWindow(id: "codex.\(key)", tool: .codex, label: label(minutes: minutes), percent: current,
-                               resetsAt: resets, detail: nil)
-        }
-    }
-
-    static func label(minutes: Int) -> String {
-        switch minutes {
-        case 300: return "5 小时"
-        case 1440: return "每天"
-        case 10080: return "每周"
-        case 0: return "额度"
-        default: return minutes % 1440 == 0 ? "\(minutes / 1440) 天" : "\(minutes / 60) 小时"
-        }
-    }
-}
-
 public enum UsageForecast {
     /// When the window reaches 100 % at the pace of the last three hours of samples (oldest first),
     /// or nil when there is not enough movement or the window resets first.

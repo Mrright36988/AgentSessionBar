@@ -20,9 +20,10 @@ struct InboxView: View {
         let selected = everything.first { $0.id == selection } ?? map.islands.first
         let waiting = inbox.ordered.filter { inbox.state(of: $0) == .waiting }
         VStack(spacing: 0) {
-            HUDHeader(inbox: inbox, usage: store.usage, hasUsageNote: store.usageNote != nil, showUsage: $showUsage)
+            HUDHeader(inbox: inbox, usage: store.usage, codexTokens: store.codexTokens,
+                      hasUsageNote: store.usageNote != nil, showUsage: $showUsage)
             if showUsage {
-                UsageSection(windows: store.usage, note: store.usageNote)
+                UsageSection(windows: store.usage, codexTokens: store.codexTokens, note: store.usageNote)
             }
             if let notice = store.notice {
                 HStack(alignment: .top, spacing: 8) {

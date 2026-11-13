@@ -35,21 +35,6 @@ private func json(_ text: String) throws -> JSONValue {
     #expect(windows[1].resetsAt == Date(timeIntervalSince1970: 1793848488))
 }
 
-@Test func codexWeeklyWindowFromRollout() throws {
-    let limits = try json(#"{"limit_id":"codex","primary":{"used_percent":12.0,"window_minutes":10080,"resets_at":1793848488},"secondary":null,"credits":{"has_credits":false}}"#)
-    let windows = CodexUsage.parse(limits, now: Date(timeIntervalSince1970: 1793300000))
-    #expect(windows.count == 1)
-    #expect(windows[0].label == "每周")
-    #expect(windows[0].percent == 12)
-}
-
-@Test func codexWindowThatAlreadyResetStartsAtZero() throws {
-    let limits = try json(#"{"primary":{"used_percent":88.0,"window_minutes":300,"resets_at":1000}}"#)
-    let windows = CodexUsage.parse(limits, now: Date(timeIntervalSince1970: 2000))
-    #expect(windows[0].label == "5 小时")
-    #expect(windows[0].percent == 0)
-}
-
 @Test func forecastExtrapolatesTheRecentPace() {
     let now = Date(timeIntervalSince1970: 100_000)
     let samples = [(at: now.addingTimeInterval(-3600), percent: 40.0), (at: now, percent: 50.0)]

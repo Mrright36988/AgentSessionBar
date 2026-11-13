@@ -71,6 +71,9 @@ enum Diagnostics {
             Log.write("dump usage [\(window.tool.rawValue)] \(window.label) \(window.percent)% detail=\(window.detail ?? "-") resets=\(window.resetsAt.map { "\($0)" } ?? "-") eta=\(window.depletesAt.map { "\($0)" } ?? "-")")
         }
         if let note = store.usageNote { Log.write("dump usage note=\(note)") }
+        if let tokens = store.codexTokens {
+            Log.write("dump codex tokens input=\(tokens.inputTokens) cached=\(tokens.cachedInputTokens) output=\(tokens.outputTokens) responses=\(tokens.responseCount) partial=\(tokens.isPartial)")
+        }
         for session in inbox.ordered {
             let cards = inbox.cards(for: session.id).map { "\($0.summary)\(store.canAnswer($0.id) ? "" : " (answer in Cursor)")" }
             Log.write("dump \(inbox.state(of: session).label) [\(session.tool.rawValue)] \(session.displayTitle) | \(session.project) | id=\(session.id.prefix(8)) cards=\(cards) last=\(session.lastMessage?.prefix(40) ?? "")")

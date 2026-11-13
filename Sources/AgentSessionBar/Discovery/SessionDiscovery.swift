@@ -39,7 +39,7 @@ actor DiskScanner {
         let id: String
         let cwd: String
         let title: String?
-        let busy: Bool
+        let busy: Bool?
         let activeAt: Date?
     }
 
@@ -48,6 +48,7 @@ actor DiskScanner {
     private var titles: [String: (offset: UInt64, title: String?)] = [:]
     private var codexNames: [String: String] = [:]
     private var codexIndexModified: Date?
+    private var codexActivity: [String: (modified: Date, activity: (running: Bool, at: Date)?)] = [:]
 
     /// Open Cursor windows, one per Claude Code extension lock file.
     func cursorWindows() -> [IDEWindow] {
@@ -66,24 +67,17 @@ actor DiskScanner {
     func recentCodexThreads() -> [Found] {
         let root = home.appendingPathComponent(".codex/sessions")
         let windows = IDELocks.load(directory: home.appendingPathComponent(".claude/ide")).filter { $0.ideName == "Cursor" }
-        let calendar = Calendar(identifier: .gregorian)
         let now = Date()
         var found: [Found] = []
-        for offset in 0..<2 {
-            guard let day = calendar.date(byAdding: .day, value: -offset, to: now) else { continue }
-            let parts = calendar.dateComponents([.year, .month, .day], from: day)
-            let folder = root.appendingPathComponent(String(format: "%04d/%02d/%02d", parts.year!, parts.month!, parts.day!))
-            let entries = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
-            for entry in entries where entry.pathExtension == "jsonl" {
-                guard let modified = try? entry.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate,
-                      now.timeIntervalSince(modified) < 2 * 3600,
-                      let line = CodexRollouts.firstLine(of: entry),
-                      let thread = CodexRollouts.parseMeta(firstLine: line, file: entry), thread.isFromIDE,
-                      windows.contains(where: { $0.contains(path: thread.cwd) }) else { continue }
-                // A rollout written in the last half minute belongs to a turn that is still going.
-                found.append(Found(id: thread.id, cwd: thread.cwd, title: nil, busy: now.timeIntervalSince(modified) < 30,
-                                   activeAt: modified))
+        for thread in CodexRollouts.recent(sessionsRoot: root, within: 2 * 3600, now: now) {
+            guard thread.isFromIDE, windows.contains(where: { $0.contains(path: thread.cwd) }),
+                  let modified = try? thread.file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate else { continue }
+            if codexActivity[thread.id]?.modified != modified {
+                codexActivity[thread.id] = (modified, CodexRollouts.latestActivity(in: thread.file))
             }
+            let activity = codexActivity[thread.id]?.activity
+            found.append(Found(id: thread.id, cwd: thread.cwd, title: nil, busy: activity?.running,
+                               activeAt: activity?.at))
         }
         return found
     }

@@ -49,6 +49,18 @@ private func registered(_ pid: Int32, _ entrypoint: String = "claude-vscode") ->
     #expect(thread.isFromIDE)
 }
 
+@Test func codexSubagentsAreNotUserIDESessions() throws {
+    let line = #"{"type":"session_meta","payload":{"id":"child","cwd":"/w","originator":"codex_vscode","source":{"subagent":{"thread_spawn":{"parent_thread_id":"parent"}}}}}"#
+    let thread = try #require(CodexRollouts.parseMeta(firstLine: Data(line.utf8), file: URL(fileURLWithPath: "/tmp/child.jsonl")))
+    #expect(!thread.isFromIDE)
+}
+
+@Test func codexOrdinaryForksRemainUserIDESessions() throws {
+    let line = #"{"type":"session_meta","payload":{"id":"fork","cwd":"/w","originator":"codex_vscode","source":"vscode","forked_from_id":"parent"}}"#
+    let thread = try #require(CodexRollouts.parseMeta(firstLine: Data(line.utf8), file: URL(fileURLWithPath: "/tmp/fork.jsonl")))
+    #expect(thread.isFromIDE)
+}
+
 @Test func firstLineStopsAtNewline() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("deckcore-\(UUID().uuidString).jsonl")
     try Data("first\nsecond\n".utf8).write(to: url)

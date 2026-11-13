@@ -47,7 +47,7 @@
      - SessionStart 管会话开始，会话结束看会话注册表。不挂 SessionEnd：Cursor 会拿 `~/.claude/settings.json` 里的 hook 跑它自带的 Agent，关窗时要等 SessionEnd hook 跑完，会把关窗卡住；
      - 会话注册表里的 busy/idle 兜底。
      - 不用 Notification(permission_prompt)：它要在审批框弹出约 6 秒后才触发。
-   - Codex 的状态信号：Codex hooks（SessionStart、UserPromptSubmit、PermissionRequest、Stop）。不用 `notify`：它只能配一个，已经被 Codex Computer Use 占用。
+   - Codex 的状态信号：Codex hooks（SessionStart、UserPromptSubmit、PermissionRequest、Stop），由 rollout 中明确的任务开始／完成／中止记录兜底；不根据文件修改时间推断“在跑”。较新的状态观测可校正漏掉的 hook，旧观测不覆盖新状态，待审批卡片仍优先。子 agent 不独立进入会话列表。不用 `notify`：它只能配一个，已经被 Codex Computer Use 占用。
 3. **通知**
    - 会话变成“等我处理”或“新完成”时，弹 macOS 通知。
    - 可以直接在通知上操作（见 P1）。
@@ -68,7 +68,7 @@
 
 ### 后置
 
-8a. **用量面板**（2026-10-29 加入范围，已实现）：每个额度窗口一条进度条，带重置倒计时，并按最近的消耗速度预测何时用完。数据来源：Claude 用插件自带程序的 `get_usage`，Codex 用 rollout 里的 `rate_limits`。
+8a. **用量面板**：Claude 的每个额度窗口一条进度条，带重置倒计时和消耗速度预测，数据来自插件自带程序的 `get_usage`。Codex 显示今天本机所有会话（含子 agent、归档）的输入、其中的缓存命中和输出 token；读取逐响应的 `token_usage_record.usage`，按响应 ID 去重，每分钟刷新。仅统计本机可见日志，不代表账号额度或账单。范围与运行状态修正见 [决策记录](decisions.md)。
 
 9. **用量统计**（今天、本周、7 天趋势，按工具、账号、项目分）和**多账号归属**：仍然放到后面做。真要做的时候：
    - 先想清楚要看的是“花了多少钱”还是“额度还剩多少”。

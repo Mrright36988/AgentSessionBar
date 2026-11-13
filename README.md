@@ -44,7 +44,7 @@ If you run many agent sessions across several Cursor windows, finding out who ne
 - **Answer in place.** Claude Code permission prompts show the full command or diff with Allow / Deny; `AskUserQuestion` choices can be picked (or a custom answer typed). Whatever is waiting on you stays pinned at the top, whichever island is selected. Cursor keeps showing its own prompt, and whoever answers first wins.
 - **Reply to Codex.** When a Codex session finishes, you can send it the next message from the menu bar (`codex queue`).
 - **Jump to the window.** "跳到这个窗口" or a click on a session raises the Cursor window it runs in, including multi-root workspaces (saved `.code-workspace` or untitled).
-- **Usage at a glance.** Rings for your Claude and Codex limits; click them for reset times and a forecast of when you will run out.
+- **Usage at a glance.** Today's local Codex token count, including sub-agents; click for input, cached input and output. Claude limits keep their rings, reset times and depletion forecast.
 - **Notifications** when a session needs you or finishes, and a **floating panel** that stays on top across Spaces.
 - Follows the system's **Reduce Motion** setting.
 
@@ -62,9 +62,9 @@ flowchart LR
 
 - **Hooks.** `install.py` registers `agentsessionbar-hook` for `SessionStart`, `UserPromptSubmit`, `PermissionRequest`, `PostToolUse` and `Stop` in Claude Code and Codex, plus `StopFailure` in Claude Code and `SessionEnd` in Codex. Each event goes to the app over `~/Library/Application Support/AgentSessionBar/hook.sock` as one line: `{"v":1,"tool":"claude","event":"PermissionRequest","wait":true,"payload":{…}}`. Only `PermissionRequest` waits for a reply (`{"output": …}`), which the hook prints as its decision. If the app is not running, the hook exits within about 0.1 s and the session carries on as if nothing were installed.
 - **Cursor's own agent.** Cursor also runs the hooks in `~/.claude/settings.json` for its built-in agent (Settings → Third-Party Imports). `agentsessionbar-hook` ignores those calls. Claude Code gets no `SessionEnd` hook because Cursor makes a closing window wait for it; the app notices an ended Claude session on its next scan instead.
-- **Discovery.** Open Cursor windows come from the Claude Code extension's lock files (`~/.claude/ide/*.lock`), live Claude sessions from `~/.claude/sessions`, Codex threads from `~/.codex/sessions`. Headless runs (`claude -p`, `codex exec`) are ignored, including a `claude -p` that a session starts from its own scripts.
+- **Discovery.** Open Cursor windows come from the Claude Code extension's lock files (`~/.claude/ide/*.lock`), live Claude sessions from `~/.claude/sessions`, Codex threads from `~/.codex/sessions`. Headless runs (`claude -p`, `codex exec`) and Codex sub-agents are excluded from the session list, including a `claude -p` that a session starts from its own scripts. Codex running state comes from explicit turn start/end records; file modification time alone does not mean a task is running. Newer state observations can correct a missed hook; older scans cannot undo a newer hook, and pending approvals keep priority.
 - **Jumping.** The window is raised with the `cursor` command, pointed at the folder, the saved `.code-workspace`, or for an untitled multi-root workspace the `workspace.json` Cursor keeps for it.
-- **Usage.** Claude: the Claude Code binary that ships inside the Cursor extension answers a `get_usage` control request (the same data as the extension's usage panel). Codex: `rate_limits` from local rollout files. AgentSessionBar itself makes no network requests.
+- **Usage.** Claude: the Claude Code binary that ships inside the Cursor extension answers a `get_usage` control request (the same data as the extension's usage panel). Codex: per-response `token_usage_record.usage` from `~/.codex/sessions` and `~/.codex/archived_sessions`, deduplicated by response ID and summed for the current local calendar day. This includes all local Codex clients and sub-agents, across accounts, with a refresh every minute. Cached input is part of input, and total is input plus output. Missing or older logs can make the count partial; it is not an account quota or billing total. AgentSessionBar itself makes no network requests.
 
 ### Safety
 
@@ -160,7 +160,7 @@ brew install --cask mrright36988/tap/agentsessionbar
 - **就地作答**：Claude Code 的权限请求会显示完整命令或 diff，可以直接允许或拒绝；`AskUserQuestion` 选择题可以直接选，也可以自己写答案。等你处理的卡片固定在最上面，和选中哪座岛无关。Cursor 里的提示照常显示，哪边先答算哪边的。
 - **回复 Codex**：Codex 会话结束后，可以在菜单栏里直接发下一条消息（`codex queue`）。
 - **跳到窗口**：点“跳到这个窗口”或点会话，把它所在的 Cursor 窗口切到前台，支持多根 workspace（已保存的 `.code-workspace` 和未保存的都行）。
-- **用量一眼可见**：Claude 和 Codex 的额度用圆环显示；点开能看重置时间，以及按当前速度预计何时用完。
+- **用量一眼可见**：Codex 显示今天本机的 token 消耗，包含子 agent；点开看输入、其中的缓存命中和输出。Claude 保留额度圆环、重置时间和预计用完时间。
 - 会话等你或完成时发**系统通知**；可以**钉成悬浮面板**，在所有桌面空间置顶显示。
 - 跟随系统的**减弱动态效果**设置。
 
@@ -170,9 +170,9 @@ brew install --cask mrright36988/tap/agentsessionbar
 
 - **Hook**：`install.py` 在 Claude Code 和 Codex 里为 `SessionStart`、`UserPromptSubmit`、`PermissionRequest`、`PostToolUse`、`Stop` 注册 `agentsessionbar-hook`，Claude Code 另加 `StopFailure`，Codex 另加 `SessionEnd`。每个事件通过 `~/Library/Application Support/AgentSessionBar/hook.sock` 以一行 JSON 发给 app：`{"v":1,"tool":"claude","event":"PermissionRequest","wait":true,"payload":{…}}`。只有 `PermissionRequest` 会等待回复（`{"output": …}`），hook 把它作为决定输出。app 没在运行时，hook 约 0.1 秒内退出，会话照常进行，就像没装过一样。
 - **Cursor 自带的 Agent**：Cursor 也会拿 `~/.claude/settings.json` 里的 hook 去跑它自带的 Agent（设置 → Third-Party Imports），`agentsessionbar-hook` 会忽略这些调用。Claude Code 不注册 `SessionEnd`，因为 Cursor 关窗时要等它跑完；Claude 会话结束改由 app 下一次扫描发现。
-- **发现会话**：打开的 Cursor 窗口来自 Claude Code 插件的锁文件（`~/.claude/ide/*.lock`），存活的 Claude 会话来自 `~/.claude/sessions`，Codex 会话来自 `~/.codex/sessions`。无头运行（`claude -p`、`codex exec`）会被忽略，会话自己在脚本里起的 `claude -p` 也一样。
+- **发现会话**：打开的 Cursor 窗口来自 Claude Code 插件的锁文件（`~/.claude/ide/*.lock`），存活的 Claude 会话来自 `~/.claude/sessions`，Codex 会话来自 `~/.codex/sessions`。会话列表排除无头运行（`claude -p`、`codex exec`）和 Codex 子 agent，会话自己在脚本里起的 `claude -p` 也一样。Codex 的运行状态取自明确的任务开始／结束记录，不以文件修改时间推断“在跑”。较新的状态观测可校正漏掉的 hook，旧扫描不覆盖新 hook，待审批卡片继续优先。
 - **跳转**：用 `cursor` 命令拉起窗口，参数是目录、已保存的 `.code-workspace`，或者未保存的多根 workspace 在 Cursor 里对应的 `workspace.json`。
-- **用量**：Claude 部分由 Cursor 插件自带的 Claude Code 程序响应 `get_usage` 控制请求，数据和插件的用量面板同源；Codex 部分读本地 rollout 文件里的 `rate_limits`。AgentSessionBar 本身不发任何网络请求。
+- **用量**：Claude 部分由 Cursor 插件自带的 Claude Code 程序响应 `get_usage` 控制请求，数据和插件的用量面板同源；Codex 部分读取 `~/.codex/sessions` 和 `~/.codex/archived_sessions` 中逐次响应的 `token_usage_record.usage`，按响应 ID 去重，按本机自然日累计，每分钟刷新。范围包含所有本机 Codex 客户端、子 agent 和账号；缓存命中属于输入，总量为输入加输出。缺失或旧版日志可能导致统计不完整；这里显示的是本机记录的消耗，不是账号额度或账单总量。AgentSessionBar 本身不发任何网络请求。
 
 ### 安全
 

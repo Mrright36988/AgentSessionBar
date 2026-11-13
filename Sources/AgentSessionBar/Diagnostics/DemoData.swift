@@ -44,8 +44,9 @@ enum DemoData {
         }
         let usage = [
             UsageWindow(id: "claude.spend", tool: .claude, label: "额外用量 · 本月", percent: 57, resetsAt: nil, detail: "$1,200 / $2,500"),
-            UsageWindow(id: "codex.week", tool: .codex, label: "每周", percent: 12, resetsAt: now.addingTimeInterval(6 * 86400), detail: nil),
         ]
-        return DeckStore(preview: inbox, windows: windows, usage: usage)
+        return DeckStore(preview: inbox, windows: windows, usage: usage,
+                         codexTokens: CodexTokenUsage(inputTokens: 1_240_000, cachedInputTokens: 980_000,
+                                                     outputTokens: 32_500, responseCount: 48))
     }
 }

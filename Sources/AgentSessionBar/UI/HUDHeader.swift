@@ -1,14 +1,41 @@
 import DeckCore
 import SwiftUI
 
-/// Usage limits with reset countdowns, coloured like the common menu bar meters (orange 70 %, red 90 %).
+/// Today's local Codex tokens and Claude limits with reset countdowns.
 struct UsageSection: View {
     let windows: [UsageWindow]
+    let codexTokens: CodexTokenUsage?
     let note: String?
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             VStack(alignment: .leading, spacing: 8) {
+                if let tokens = codexTokens {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Codex · 今天（本机）").font(.caption.weight(.semibold))
+                            Spacer()
+                            Text("\(tokens.totalTokens.formatted()) tokens")
+                                .font(.caption.monospacedDigit().weight(.semibold)).foregroundStyle(HUD.codex)
+                        }
+                        HStack(alignment: .top, spacing: 12) {
+                            tokenCount("输入", tokens.inputTokens)
+                            Spacer(minLength: 0)
+                            tokenCount("其中缓存命中", tokens.cachedInputTokens)
+                            Spacer(minLength: 0)
+                            tokenCount("输出", tokens.outputTokens)
+                        }
+                        Text("包含子 agent · 缓存命中已计入输入 · 每分钟更新")
+                            .font(.caption2).foregroundStyle(HUD.text2)
+                        if tokens.isPartial {
+                            Text("部分日志不可读或缺少逐次记录，仅显示已读取的消耗")
+                                .font(.caption2).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                        } else if tokens.responseCount == 0 {
+                            Text("今天暂无本机 token 记录").font(.caption2).foregroundStyle(HUD.text2)
+                        }
+                    }
+                    if !windows.isEmpty { Divider() }
+                }
                 ForEach(windows) { window in
                     VStack(alignment: .leading, spacing: 3) {
                         HStack {
@@ -39,6 +66,14 @@ struct UsageSection: View {
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 12).fill(HUD.surface).overlay(RoundedRectangle(cornerRadius: 12).stroke(HUD.line)))
         .padding(.horizontal, 12).padding(.bottom, 8)
+    }
+
+    private func tokenCount(_ label: String, _ count: Int) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).foregroundStyle(HUD.text2)
+            Text(count.formatted()).monospacedDigit()
+        }
+        .font(.caption2)
     }
 
     private func color(_ level: UsageWindow.Level) -> Color {
@@ -89,6 +124,7 @@ private struct UsageRing: View {
 struct HUDHeader: View {
     let inbox: Inbox
     let usage: [UsageWindow]
+    let codexTokens: CodexTokenUsage?
     let hasUsageNote: Bool
     @Binding var showUsage: Bool
 
@@ -104,12 +140,24 @@ struct HUDHeader: View {
                 }
             }
             Spacer(minLength: 8)
-            if !usage.isEmpty || hasUsageNote {
+            if !usage.isEmpty || codexTokens != nil || hasUsageNote {
                 Button { showUsage.toggle() } label: {
-                    if usage.isEmpty {
+                    if usage.isEmpty && codexTokens == nil {
                         Text("用量").font(.system(size: 11.5)).foregroundStyle(HUD.text2)
                     } else {
-                        HStack(spacing: 10) { ForEach(usage) { UsageRing(window: $0) } }
+                        HStack(spacing: 10) {
+                            ForEach(usage) { UsageRing(window: $0) }
+                            if let tokens = codexTokens {
+                                VStack(spacing: 2) {
+                                    Text(tokens.totalTokens.formatted(.number.notation(.compactName).precision(.fractionLength(0...1))))
+                                        .font(.system(size: 18, weight: .semibold).monospacedDigit())
+                                        .foregroundStyle(tokens.isPartial ? .orange : HUD.codex)
+                                    Text("Codex · 今天").font(.system(size: 10)).foregroundStyle(HUD.text2)
+                                    Text("tokens").font(.system(size: 9)).foregroundStyle(HUD.text3)
+                                }
+                                .help(tokens.isPartial ? "本机日志统计不完整，点开查看" : "今天本机 Codex token 消耗，点开查看")
+                            }
+                        }
                     }
                 }
                 .buttonStyle(.plain)

@@ -94,7 +94,7 @@ private let bash: JSONValue = .object(["command": .string("touch probe_perm.txt"
     #expect(inbox.sessions.isEmpty)
 }
 
-@Test func discoveryDoesNotOverrideHookState() {
+@Test func discoveryWithoutANewerObservationDoesNotOverrideHookState() {
     var inbox = Inbox()
     inbox.discovered(id: "s1", tool: .claude, cwd: "/w/x", title: "修复登录", busy: true, at: t0)
     #expect(inbox.sessions["s1"]?.running == true)
@@ -102,6 +102,64 @@ private let bash: JSONValue = .object(["command": .string("touch probe_perm.txt"
     inbox.discovered(id: "s1", tool: .claude, cwd: "/w/x", title: "修复登录", busy: true, at: t0)
     #expect(inbox.sessions["s1"]?.running == false)
     #expect(inbox.sessions["s1"]?.displayTitle == "修复登录")
+}
+
+@Test func newerDiscoveryClearsRunningWhenTheStopHookWasMissed() {
+    var inbox = Inbox()
+    inbox.apply(envelope("UserPromptSubmit", tool: .codex), at: t0)
+    let finished = t0.addingTimeInterval(60)
+    inbox.discovered(id: "s1", tool: .codex, cwd: "/w/devkits", title: nil, busy: false,
+                     activeAt: finished, at: finished.addingTimeInterval(5))
+    #expect(inbox.sessions["s1"]?.running == false)
+    #expect(inbox.state(of: inbox.sessions["s1"]!) == .doneUnread)
+    #expect(inbox.sessions["s1"]?.updatedAt == finished)
+}
+
+@Test func newerDiscoveryStartsARunningTurnAndClearsUnread() {
+    var inbox = Inbox()
+    inbox.apply(envelope("Stop", tool: .codex), at: t0)
+    let started = t0.addingTimeInterval(60)
+    inbox.discovered(id: "s1", tool: .codex, cwd: "/w/devkits", title: nil, busy: true,
+                     activeAt: started, at: started.addingTimeInterval(5))
+    #expect(inbox.state(of: inbox.sessions["s1"]!) == .running)
+    #expect(inbox.sessions["s1"]?.unread == false)
+}
+
+@Test func olderDiscoveryCannotUndoANewerPromptOrStop() {
+    var inbox = Inbox()
+    let later = t0.addingTimeInterval(60)
+    inbox.apply(envelope("UserPromptSubmit", tool: .codex), at: later)
+    inbox.discovered(id: "s1", tool: .codex, cwd: "/w/devkits", title: nil, busy: false, activeAt: t0, at: later)
+    #expect(inbox.sessions["s1"]?.running == true)
+    inbox.apply(envelope("Stop", tool: .codex), at: later)
+    inbox.discovered(id: "s1", tool: .codex, cwd: "/w/devkits", title: nil, busy: true, activeAt: t0, at: later)
+    #expect(inbox.state(of: inbox.sessions["s1"]!) == .doneUnread)
+}
+
+@Test func metadataRefreshDoesNotHideANewerStateObservation() {
+    var inbox = Inbox()
+    inbox.apply(envelope("UserPromptSubmit", tool: .codex), at: t0)
+    inbox.discovered(id: "s1", tool: .codex, cwd: "/w/devkits", title: "renamed", busy: nil,
+                     activeAt: t0.addingTimeInterval(120), at: t0.addingTimeInterval(120))
+    inbox.discovered(id: "s1", tool: .codex, cwd: "/w/devkits", title: nil, busy: false,
+                     activeAt: t0.addingTimeInterval(60), at: t0.addingTimeInterval(125))
+    #expect(inbox.state(of: inbox.sessions["s1"]!) == .doneUnread)
+}
+
+@Test func discoveryCanResolveAnInitiallyUnknownState() {
+    var inbox = Inbox()
+    inbox.discovered(id: "s1", tool: .codex, cwd: "/w/devkits", title: nil, busy: nil, at: t0.addingTimeInterval(60))
+    inbox.discovered(id: "s1", tool: .codex, cwd: "/w/devkits", title: nil, busy: true, activeAt: t0, at: t0.addingTimeInterval(65))
+    #expect(inbox.state(of: inbox.sessions["s1"]!) == .running)
+}
+
+@Test func discoveryKeepsPendingApprovalsWaiting() {
+    var inbox = Inbox()
+    let card = inbox.apply(envelope("PermissionRequest", ["tool_name": .string("Bash"), "tool_input": bash], wait: true), at: t0).opened!
+    let later = t0.addingTimeInterval(60)
+    inbox.discovered(id: "s1", tool: .claude, cwd: "/w/devkits", title: nil, busy: false, activeAt: later, at: later)
+    #expect(inbox.state(of: inbox.sessions["s1"]!) == .waiting)
+    #expect(inbox.cards[card.id] == card)
 }
 
 @Test func discoveredSessionsShowTheirLastActivityNotTheScanTime() {

@@ -1,13 +1,13 @@
 import DeckCore
 import Foundation
 
-/// Polls both tools' usage limits and keeps a short history per limit for the depletion forecast.
+/// Polls Claude limits and today's local Codex tokens; forecasts apply only to limits.
 @MainActor
 final class UsageMonitor {
-    var onChange: (([UsageWindow], String?) -> Void)?
+    var onChange: (([UsageWindow], CodexTokenUsage?, String?) -> Void)?
 
     private var claude: [UsageWindow] = []
-    private var codex: [UsageWindow] = []
+    private var codexTokens: CodexTokenUsage?
     private var claudeNote: String?
     private var samples: [String: [(at: Date, percent: Double)]] = [:]
 
@@ -33,13 +33,12 @@ final class UsageMonitor {
         } else {
             claudeNote = "Claude 额度暂时取不到（读取接口是实验性的，可能随插件升级变化）"
         }
-        onChange?(claude + codex, claudeNote)
+        onChange?(claude, codexTokens, claudeNote)
     }
 
     private func refreshCodex() async {
-        let limits = await Task.detached(priority: .utility) { CodexUsageReader.latest() }.value
-        codex = limits.map { record(CodexUsage.parse($0)) } ?? []
-        onChange?(claude + codex, claudeNote)
+        codexTokens = await Task.detached(priority: .utility) { CodexTokenUsageReader.today() }.value
+        onChange?(claude, codexTokens, claudeNote)
     }
 
     /// Adds a sample per limit (restarting the history when usage drops, i.e. after a reset) and forecasts.
@@ -64,45 +63,6 @@ final class UsageMonitor {
         let calendar = Calendar.current
         let month = calendar.dateInterval(of: .month, for: date)
         return month?.end
-    }
-}
-
-/// Reads `rate_limits` from the newest Codex rollouts; Codex records them with every `token_count` event.
-enum CodexUsageReader {
-    static func latest() -> JSONValue? {
-        let root = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex/sessions")
-        let calendar = Calendar(identifier: .gregorian)
-        let days = (0..<8).compactMap { calendar.date(byAdding: .day, value: -$0, to: Date()) }
-        var files: [(URL, Date)] = []
-        for day in days {
-            let parts = calendar.dateComponents([.year, .month, .day], from: day)
-            let folder = root.appendingPathComponent(String(format: "%04d/%02d/%02d", parts.year!, parts.month!, parts.day!))
-            let entries = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
-            for entry in entries where entry.pathExtension == "jsonl" {
-                let modified = (try? entry.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
-                files.append((entry, modified))
-            }
-        }
-        for (file, _) in files.sorted(by: { $0.1 > $1.1 }).prefix(5) {
-            if let limits = lastRateLimits(in: file) { return limits }
-        }
-        return nil
-    }
-
-    private static func lastRateLimits(in file: URL) -> JSONValue? {
-        guard let handle = try? FileHandle(forReadingFrom: file), let size = try? handle.seekToEnd() else { return nil }
-        defer { try? handle.close() }
-        let tail: UInt64 = 512 * 1024
-        try? handle.seek(toOffset: size > tail ? size - tail : 0)
-        guard let data = try? handle.readToEnd() else { return nil }
-        let marker = Data(#""rate_limits":{"#.utf8)
-        for line in data.split(separator: UInt8(ascii: "\n")).reversed() where line.range(of: marker) != nil {
-            if let event = try? JSONDecoder().decode(JSONValue.self, from: line),
-               let limits = event["payload"]?["rate_limits"], limits["primary"] != nil {
-                return limits
-            }
-        }
-        return nil
     }
 }
 

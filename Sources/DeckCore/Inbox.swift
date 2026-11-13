@@ -87,6 +87,8 @@ public struct Session: Sendable, Identifiable, Equatable {
     public var transcriptPath: String?
     public var running = false
     public var unread = false
+    /// Timestamp of the last hook or observed state, separate from titles and other activity.
+    public var stateObservedAt: Date?
     public var updatedAt: Date
 
     public init(id: String, tool: Tool, cwd: String, updatedAt: Date) {
@@ -145,10 +147,12 @@ public struct Inbox: Sendable {
         switch envelope.event {
         case "UserPromptSubmit":
             session.running = true
+            session.stateObservedAt = now
             session.unread = false
             change.closed = closeCards { $0.sessionId == sessionId }
         case "PermissionRequest" where envelope.wait:
             session.running = true
+            session.stateObservedAt = now
             let toolName = payload["tool_name"]?.string ?? "?"
             let input = payload["tool_input"] ?? .null
             let kind: Card.Kind = toolName == "AskUserQuestion"
@@ -159,10 +163,12 @@ public struct Inbox: Sendable {
             change.opened = card
         case "PostToolUse":
             session.running = true
+            session.stateObservedAt = now
             let toolName = payload["tool_name"]?.string ?? ""
             change.closed = closeCards { $0.sessionId == sessionId && $0.isSettled(byToolNamed: toolName, input: payload["tool_input"]) }
         case "Stop", "StopFailure":
             session.running = false
+            session.stateObservedAt = now
             session.unread = true
             if let message = payload["last_assistant_message"]?.string { session.lastMessage = message }
             change.closed = closeCards { $0.sessionId == sessionId }
@@ -173,16 +179,22 @@ public struct Inbox: Sendable {
         return change
     }
 
-    /// Adds or refreshes a session found by scanning on-disk state, without touching hook-derived flags.
-    /// `activeAt` is the last activity the disk shows (registry status change, rollout write); it orders
-    /// sessions and drives "x minutes ago" until hook events take over.
+    /// Refreshes a discovered session. Only a newer timestamped state observation can correct hook state;
+    /// untimed or older scans cannot undo a prompt or stop. Pending cards still take priority.
     public mutating func discovered(id: String, tool: Tool, cwd: String, title: String?, busy: Bool?,
                                     activeAt: Date? = nil, at now: Date) {
         var session = sessions[id] ?? Session(id: id, tool: tool, cwd: cwd, updatedAt: activeAt ?? now)
+        if let busy, sessions[id] == nil || activeAt.map({ observed in
+            session.stateObservedAt.map { observed > $0 } ?? true
+        }) == true {
+            if busy { session.unread = false }
+            else if session.running { session.unread = true }
+            session.running = busy
+            session.stateObservedAt = activeAt
+        }
         if let activeAt, activeAt > session.updatedAt { session.updatedAt = activeAt }
         if !cwd.isEmpty { session.cwd = cwd }  // the registry records where the session started
         if let title, !title.isEmpty { session.title = title }
-        if sessions[id] == nil, let busy { session.running = busy }
         sessions[id] = session
     }
 

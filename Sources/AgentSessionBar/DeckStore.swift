@@ -13,6 +13,7 @@ final class DeckStore: ObservableObject {
 
     @Published private(set) var inbox = Inbox()
     @Published private(set) var usage: [UsageWindow] = []
+    @Published private(set) var codexTokens: CodexTokenUsage?
     @Published private(set) var usageNote: String?
     /// Open Cursor windows, refreshed with the disk scan; the map draws one island per window.
     @Published private(set) var windows: [IDEWindow] = []
@@ -33,11 +34,12 @@ final class DeckStore: ObservableObject {
     }
 
     /// A store that is never started, holding the given state: renders the UI offscreen (`DemoData`).
-    init(preview inbox: Inbox, windows: [IDEWindow], usage: [UsageWindow]) {
+    init(preview inbox: Inbox, windows: [IDEWindow], usage: [UsageWindow], codexTokens: CodexTokenUsage? = nil) {
         isPreview = true
         self.inbox = inbox
         self.windows = windows
         self.usage = usage
+        self.codexTokens = codexTokens
     }
 
     func start() {
@@ -57,8 +59,9 @@ final class DeckStore: ObservableObject {
                 try? await Task.sleep(for: .seconds(5))
             }
         }
-        usageMonitor.onChange = { [weak self] windows, note in
+        usageMonitor.onChange = { [weak self] windows, tokens, note in
             self?.usage = windows
+            self?.codexTokens = tokens
             self?.usageNote = note
         }
         usageMonitor.start()

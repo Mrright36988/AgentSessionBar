@@ -107,8 +107,9 @@ public struct CodexThread: Sendable, Equatable {
     public let cwd: String
     public let originator: String
     public let file: URL
+    public let isSubagent: Bool
 
-    public var isFromIDE: Bool { originator == "codex_vscode" }
+    public var isFromIDE: Bool { originator == "codex_vscode" && !isSubagent }
 }
 
 public enum CodexRollouts {
@@ -117,7 +118,9 @@ public enum CodexRollouts {
               let payload = object["payload"] as? [String: Any],
               let id = payload["id"] as? String,
               let cwd = payload["cwd"] as? String else { return nil }
-        return CodexThread(id: id, cwd: cwd, originator: payload["originator"] as? String ?? "", file: file)
+        let subagent = (payload["source"] as? [String: Any])?["subagent"]
+        let isSubagent = (subagent != nil && !(subagent is NSNull)) || payload["source"] as? String == "subagent"
+        return CodexThread(id: id, cwd: cwd, originator: payload["originator"] as? String ?? "", file: file, isSubagent: isSubagent)
     }
 
     /// Threads whose rollout file changed within `window`, newest first.
@@ -148,6 +151,72 @@ public enum CodexRollouts {
         }
         return buffer.isEmpty ? nil : buffer
     }
+
+    public static func latestActivity(in file: URL) -> (running: Bool, at: Date)? {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        guard let first = firstLine(of: file),
+              let meta = try? decoder.decode(ActivityEvent.self, from: first), meta.type == "session_meta",
+              let owner = meta.payload.id, !owner.isEmpty,
+              let handle = try? FileHandle(forReadingFrom: file) else { return nil }
+        defer { try? handle.close() }
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let standard = ISO8601DateFormatter()
+        var copiedHistory = false
+        var currentTurn: String?
+        var latest: (running: Bool, at: Date)?
+
+        func consume(_ line: Data) {
+            guard let event = try? decoder.decode(ActivityEvent.self, from: line) else { return }
+            let payload = event.payload
+            if event.type == "session_meta", let id = payload.id {
+                copiedHistory = id != owner
+                return
+            }
+            guard event.type == "event_msg" else { return }
+            if payload.type == "thread_settings_applied", let thread = payload.threadId {
+                copiedHistory = thread != owner
+                return
+            }
+            guard !copiedHistory, payload.threadId == nil || payload.threadId == owner,
+                  let turn = payload.turnId, !turn.isEmpty, let timestamp = event.timestamp,
+                  let at = fractional.date(from: timestamp) ?? standard.date(from: timestamp) else { return }
+            if payload.type == "task_started" {
+                currentTurn = turn
+                latest = (true, at)
+            } else if ["task_complete", "turn_aborted", "task_aborted"].contains(payload.type),
+                      currentTurn == nil || currentTurn == turn {
+                currentTurn = turn
+                latest = (false, at)
+            }
+        }
+
+        do {
+            var buffer = Data()
+            while let chunk = try handle.read(upToCount: 64 * 1024), !chunk.isEmpty {
+                buffer.append(chunk)
+                while let newline = buffer.firstIndex(of: UInt8(ascii: "\n")) {
+                    consume(Data(buffer[..<newline]))
+                    buffer.removeSubrange(buffer.startIndex...newline)
+                }
+            }
+            if !buffer.isEmpty { consume(buffer) }
+        } catch { return nil }
+        return latest
+    }
+}
+
+private struct ActivityEvent: Decodable {
+    struct Payload: Decodable {
+        let id: String?
+        let type: String?
+        let threadId: String?
+        let turnId: String?
+    }
+    let type: String
+    let timestamp: String?
+    let payload: Payload
 }
 
 private func jsonFiles(in directory: URL, withExtension ext: String) -> [Data] {
